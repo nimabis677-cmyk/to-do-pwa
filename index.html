@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>مدیریت وظایف یگانه</title>
+  <link href="https://cdn.fontcdn.ir/Font/Persian/Mitra/Mitra.css" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007bff">
+  <style>
+    body {
+      font-family: 'Mitra', sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    h1 { color: #007bff; }
+    .task {
+      background: #fff;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-right: 5px solid #007bff;
+    }
+    select, input, textarea, button {
+      font-family: 'Mitra', sans-serif;
+      margin: 5px 0;
+      padding: 8px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<h1>مدیریت وظایف</h1>
+
+<button onclick="askNotificationPermission()">فعال‌سازی اعلان</button>
+
+<div id="task-form">
+  <input type="text" id="task-title" placeholder="عنوان وظیفه">
+  <textarea id="task-note" placeholder="یادداشت..."></textarea>
+  <input type="datetime-local" id="task-time">
+  <select id="task-category">
+    <option value="شخصی">شخصی</option>
+    <option value="کاری">کاری</option>
+    <option value="فوری">فوری</option>
+    <option value="هفته آینده">هفته آینده</option>
+  </select>
+  <button onclick="addTask()">افزودن وظیفه</button>
+</div>
+
+<hr>
+
+<h2>وظایف ثبت‌شده</h2>
+<div id="tasks"></div>
+
+<script>
+let tasks = [];
+
+function askNotificationPermission() {
+  if (!("Notification" in window)) {
+    alert("مرورگر شما از اعلان پشتیبانی نمی‌کند.");
+    return;
+  }
+
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      alert("اعلان فعال شد. در زمان مناسب هشدار ارسال می‌شود.");
+      checkNearestReminder();
+    } else {
+      alert("شما اجازه اعلان را ندادید.");
+    }
+  });
+}
+
+function addTask() {
+  const title = document.getElementById("task-title").value;
+  const note = document.getElementById("task-note").value;
+  const time = document.getElementById("task-time").value;
+  const category = document.getElementById("task-category").value;
+
+  if (!title || !time) return alert("عنوان و زمان الزامی هستند.");
+
+  const task = { title, note, time, category };
+  tasks.push(task);
+  renderTasks();
+}
+
+function renderTasks() {
+  const container = document.getElementById("tasks");
+  container.innerHTML = "";
+  tasks.forEach(task => {
+    const div = document.createElement("div");
+    div.className = "task";
+    div.innerHTML = `<strong>${task.title}</strong><br>
+                     <em>${task.time}</em><br>
+                     <small>دسته: ${task.category}</small><br>
+                     <p>${task.note}</p>`;
+    container.appendChild(div);
+  });
+}
+
+function checkNearestReminder() {
+  const now = new Date();
+  const upcoming = tasks.filter(task => new Date(task.time) > now);
+  if (upcoming.length === 0) return;
+
+  upcoming.sort((a, b) => new Date(a.time) - new Date(b.time));
+  const nearest = upcoming[0];
+  const timeDiff = new Date(nearest.time) - now;
+
+  setTimeout(() => {
+    new Notification("یادآوری:", {
+      body: `${nearest.title} - دسته: ${nearest.category}`,
+      icon: "icon-192.png"
+    });
+  }, timeDiff);
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("Service Worker ثبت شد"))
+    .catch(err => console.error("خطا در ثبت:", err));
+}
+</script>
+
+</body>
+</html>
